@@ -116,11 +116,18 @@ def create_app():
     if database_url.startswith("postgresql://"):
         database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     
+    # Railway requires SSL; add query parameter if not present
+    if "sslmode=" not in database_url:
+        database_url += "?sslmode=require"
+    
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
     app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-        "pool_pre_ping": True,  # Verify connections before using
-        "pool_recycle": 300,    # Recycle connections every 5 minutes
+        "pool_pre_ping": True,      # Verify connections before using
+        "pool_recycle": 300,        # Recycle connections every 5 minutes
+        "connect_args": {
+            "connect_timeout": 10,  # 10 second connection timeout
+        },
     }
 
     # SECURITY: Session hardening (works best behind HTTPS in production)
