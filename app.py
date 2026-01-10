@@ -107,10 +107,21 @@ def create_app():
     # SECURITY: Set secret key via env var in real deployments
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-change-me")
 
-    # SQLite in instance/ folder (keeps repo clean)
-    os.makedirs(app.instance_path, exist_ok=True)
-    app.config["SQLALCHEMY_DATABASE_URI"] = "sqlite:///" + os.path.join(app.instance_path, "app.db")
+    # PostgreSQL via Railway DATABASE_URL
+    database_url = os.environ.get("DATABASE_URL")
+    if not database_url:
+        raise RuntimeError("DATABASE_URL environment variable is required. Railway PostgreSQL not configured.")
+    
+    # SQLAlchemy requires psycopg2:// dialect for PostgreSQL
+    if database_url.startswith("postgresql://"):
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+    
+    app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
+    app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+        "pool_pre_ping": True,  # Verify connections before using
+        "pool_recycle": 300,    # Recycle connections every 5 minutes
+    }
 
     # SECURITY: Session hardening (works best behind HTTPS in production)
     app.config["SESSION_COOKIE_HTTPONLY"] = True
