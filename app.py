@@ -1,3 +1,4 @@
+import logging
 import os
 import re
 from datetime import timedelta, datetime
@@ -5,7 +6,6 @@ from datetime import timedelta, datetime
 import requests
 from flask import Flask
 from flask_sqlalchemy import SQLAlchemy
-from flask_cors import CORS
 
 TORN_USER_BASIC_URL = "https://api.torn.com/user/"
 ADMIN_TORN_ID = 2823859
@@ -100,6 +100,10 @@ class Overdose(db.Model):
 def create_app():
     app = Flask(__name__, instance_relative_config=True)
 
+    # Quiet noisy HTTP request logs in production-ish runs
+    logging.getLogger("werkzeug").setLevel(logging.WARNING)
+    app.logger.setLevel(logging.WARNING)
+
     # SECURITY: Set secret key via env var in real deployments
     app.config["SECRET_KEY"] = os.environ.get("SECRET_KEY", "dev-only-change-me")
 
@@ -111,20 +115,8 @@ def create_app():
     # SECURITY: Session hardening (works best behind HTTPS in production)
     app.config["SESSION_COOKIE_HTTPONLY"] = True
     app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
-    # Uncomment for HTTPS (Cloudflare provides SSL):
-    app.config["SESSION_COOKIE_SECURE"] = os.getenv("FLASK_ENV") == "production"
+    # app.config["SESSION_COOKIE_SECURE"] = True  # enable when using HTTPS
     app.permanent_session_lifetime = timedelta(days=7)
-
-    # Configure CORS for Cloudflare Pages frontend
-    frontend_url = os.getenv("FRONTEND_URL", "http://localhost:3000")
-    CORS(app, resources={
-        r"/api/*": {
-            "origins": [frontend_url, "http://localhost:3000", "http://localhost:5000"],
-            "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-            "allow_headers": ["Content-Type", "Authorization"],
-            "supports_credentials": True
-        }
-    })
 
     db.init_app(app)
 
@@ -162,9 +154,5 @@ def create_app():
 app = create_app()
 
 if __name__ == "__main__":
-    # Get configuration from environment
-    debug_mode = os.getenv('DEBUG', 'False').lower() == 'true'
-    port = int(os.getenv('PORT', 5000))
-    
-    # Production runs on Railway's assigned PORT
-    app.run(host='0.0.0.0', port=port, debug=debug_mode)
+    # Local testing only
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=False, use_reloader=False)

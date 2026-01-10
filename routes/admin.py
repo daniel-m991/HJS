@@ -114,11 +114,9 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
             
             # Get all pending orders for dropdown
             pending_orders = Order.query.filter_by(status='pending').all()
-            print(f"[DEBUG] Found {len(pending_orders)} pending orders")
             
             orders_data = []
             for order in pending_orders:
-                print(f"[DEBUG] Order: id={order.id}, user={order.user.torn_name}, type={order.coverage_type}, status={order.status}")
                 orders_data.append({
                     "id": order.id,
                     "user_db_id": order.user_id,  # Database user ID for activation
@@ -130,12 +128,9 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
                     "payment": order.xanax_payment
                 })
             
-            print(f"[DEBUG] Returning {len(orders_data)} orders")
             return jsonify({"orders": orders_data}), 200
         except Exception as e:
-            print(f"Error in get_pending_orders_list: {e}")
-            import traceback
-            traceback.print_exc()
+            app.logger.exception("Error in get_pending_orders_list")
             return jsonify({"error": str(e), "orders": []}), 500
     
     @app.post("/admin/verify-orders-confirm")
@@ -425,16 +420,11 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
     
     @app.post("/admin/order/activate-manual")
     def activate_order_manual():
-        print("[DEBUG] activate_order_manual called")
         admin = require_admin()
         if not admin:
-            print("[DEBUG] Admin check failed")
             return jsonify({"error": "Unauthorized"}), 403
         
-        print(f"[DEBUG] Admin authenticated: {admin.torn_name}")
-        
         data = request.get_json()
-        print(f"[DEBUG] Request data: {data}")
         
         user_id = data.get("user_id")
         coverage_type = data.get("coverage_type")  # 'XAN' or 'EXTC'
@@ -445,32 +435,23 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
             user_id = int(user_id) if user_id else None
             duration = int(duration) if duration else None
         except (ValueError, TypeError):
-            print(f"[DEBUG] Type conversion failed - user_id: {user_id}, duration: {duration}")
             return jsonify({"error": "Invalid data types"}), 400
         
-        print(f"[DEBUG] Parsed values - user_id: {user_id}, coverage_type: {coverage_type}, duration: {duration}")
-        
         if not all([user_id, coverage_type, duration]):
-            print("[DEBUG] Missing required fields")
             return jsonify({"error": "Missing required fields"}), 400
         
         user = User.query.get(user_id)
-        print(f"[DEBUG] User lookup: {user}")
         if not user:
-            print(f"[DEBUG] User {user_id} not found")
             return jsonify({"error": "User not found"}), 404
         
         # Get pricing for validation
-        print(f"[DEBUG] Looking for pricing: coverage_type={coverage_type}, duration={duration}, active=True")
         pricing = PricingConfig.query.filter_by(
             coverage_type=coverage_type,
             duration=duration,
             active=True
         ).first()
         
-        print(f"[DEBUG] Pricing found: {pricing}")
         if not pricing:
-            print(f"[DEBUG] No pricing found for {coverage_type} {duration}")
             return jsonify({"error": "Invalid coverage configuration"}), 400
         
         # Deactivate any existing active coverage of same type for this user
@@ -479,10 +460,7 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
             coverage_type=coverage_type,
             status='active'
         ).first()
-        
-        print(f"[DEBUG] Existing active order: {existing_active}")
         if existing_active:
-            print(f"[DEBUG] Deactivating existing order {existing_active.id}")
             existing_active.status = 'completed'
         
         # Delete any pending order of the same type
@@ -493,15 +471,12 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
         ).first()
         
         if existing_pending:
-            print(f"[DEBUG] Deleting pending order {existing_pending.id}")
             db.session.delete(existing_pending)
         
         # Create new active order
         now = datetime.utcnow()
         # XAN orders expire after specified hours, EXTC orders always expire in 2 hours
         expires_at = now + timedelta(hours=duration) if coverage_type == 'XAN' else now + timedelta(hours=2)
-        
-        print(f"[DEBUG] Creating order: user_id={user.id}, coverage_type={coverage_type}, status=active, payment={pricing.cost}")
         
         order = Order(
             user_id=user.id,
@@ -521,7 +496,6 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
         
         db.session.add(order)
         db.session.commit()
-        print(f"[DEBUG] Order created successfully with id: {order.id}")
         
         flash(f"Manually activated {coverage_type} cover for {user.torn_name}", "success")
         return jsonify({"success": True, "order_id": order.id}), 201
