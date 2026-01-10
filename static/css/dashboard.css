@@ -1,0 +1,237 @@
+/* Dashboard Page Styles */
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #222;
+  transition: background 0.3s, color 0.3s;
+}
+
+.page {
+  width: 90%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 0 0 12px 12px;
+  background: #f2f2f2;
+  margin-bottom: 24px;
+}
+
+nav {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.nav-center {
+  flex: 1;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-weight: 500;
+  color: #222;
+}
+
+.nav-left {
+  justify-content: flex-start;
+}
+
+.nav-right {
+  justify-content: flex-end;
+}
+
+.nav-btn {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #222;
+  background: white;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.nav-btn:hover {
+  background: #f7f7f7;
+}
+
+.dark-mode-toggle {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.card {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 16px;
+  background: white;
+}
+
+button {
+  padding: 10px 14px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.link-btn {
+  background: transparent;
+  border: none;
+  color: #0a58ca;
+  text-decoration: underline;
+  padding: 0;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.flex-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 16px;
+}
+
+.cover-card {
+  flex: 1 1 240px;
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 12px;
+  background: white;
+}
+
+.timer-section {
+  text-align: center;
+  padding: 12px 0;
+  border-bottom: 2px solid #f0f0f0;
+  margin-bottom: 12px;
+}
+
+.timer-label {
+  margin: 0 0 8px 0;
+  font-size: 14px;
+  color: #666;
+  font-weight: 500;
+}
+
+.timer {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  color: #0a58ca;
+}
+
+.cover-buttons {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.cover-buttons button {
+  width: 100%;
+  height: auto;
+  min-height: 50px;
+  padding: 12px;
+  background: #f0f0f0;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 14px;
+  text-align: left;
+  transition: all 0.2s;
+}
+
+.cover-buttons button:hover {
+  background: #e8e8e8;
+  border-color: #0a58ca;
+  transform: translateY(-2px);
+  box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.coverage-btn {
+  display: block;
+  width: 100%;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+body.dark-mode .navbar {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+body.dark-mode .nav-btn {
+  background: #333;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.dark-mode .nav-btn:hover {
+  background: #444;
+}
+
+body.dark-mode .card {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+body.dark-mode .cover-card {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+body.dark-mode .timer-section {
+  border-color: #444;
+}
+
+body.dark-mode .timer-label {
+  color: #999;
+}
+
+body.dark-mode .timer {
+  color: #4db8ff;
+}
+
+body.dark-mode .cover-buttons button {
+  background: #333;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+body.dark-mode .cover-buttons button:hover {
+  background: #444;
+  border-color: #4db8ff;
+}
+
+body.dark-mode .nav-center {
+  color: #e0e0e0;
+}
+
+body.dark-mode .cover-buttons button {
+  background: #333;
+  border-color: #555;
+  color: #e0e0e0;
+}
+
+body.dark-mode .cover-buttons button:hover {
+  background: #444;
+}
+
+body.dark-mode .link-btn {
+  color: #6c9bdb;
+}

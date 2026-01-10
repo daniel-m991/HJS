@@ -1,0 +1,7 @@
+{
+  "build": {
+    "cmd": "echo 'Deploying Flask app'",
+    "runtime": "python-3.11"
+  },
+  "start": "python app.py"
+}

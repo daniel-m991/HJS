@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Order Leaderboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+  <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
+  <style>
+    .leaderboard-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .leaderboard-table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    .leaderboard-table th { background: #0a58ca; color: white; padding: 12px; text-align: left; font-weight: 600; }
+    .leaderboard-table td { padding: 12px; border-bottom: 1px solid #ddd; }
+    .leaderboard-table tbody tr:hover { background: #f8f9fa; }
+    .leaderboard-table tbody tr:nth-child(odd) { background: #f8f9fa; }
+    body.dark-mode .leaderboard-table th { background: #084298; border-color: #666; }
+    body.dark-mode .leaderboard-table td { border-color: #444; color: #e0e0e0; }
+    body.dark-mode .leaderboard-table tbody tr:hover { background: #333; }
+    body.dark-mode .leaderboard-table tbody tr:nth-child(odd) { background: #2a2a2a; }
+    .rank-medal { font-size: 18px; font-weight: 700; margin-right: 8px; }
+    .rank-1 .rank-medal::before { content: "🥇"; }
+    .rank-2 .rank-medal::before { content: "🥈"; }
+    .rank-3 .rank-medal::before { content: "🥉"; }
+    .stats-badge { display: inline-block; background: #e9ecef; color: #333; padding: 4px 8px; border-radius: 4px; margin: 2px; font-size: 12px; }
+    body.dark-mode .stats-badge { background: #444; color: #e0e0e0; }
+    .user-info { display: flex; align-items: center; gap: 12px; }
+    .user-name { font-weight: 600; }
+    .user-id { color: #666; font-size: 12px; }
+    body.dark-mode .user-id { color: #999; }
+    .card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    body.dark-mode .card { background: #2a2a2a; border-color: #444; }
+    .btn-back { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; text-decoration: none; display: inline-block; margin-bottom: 20px; }
+    .btn-back:hover { background: #5a6268; }
+    body.dark-mode .btn-back:hover { background: #4a5258; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    {% include '_navbar.html' %}
+    
+    <div class="leaderboard-container">
+      <a href="{{ url_for('admin_panel') }}" class="btn-back">← Back to Admin Panel</a>
+      
+      <div class="card">
+        <h1>📊 Order Leaderboard</h1>
+        <p style="color: #666; font-size: 14px;">Ranked by total orders placed</p>
+      </div>
+
+      {% if leaderboard %}
+        <table class="leaderboard-table">
+          <thead>
+            <tr>
+              <th style="width: 60px;">Rank</th>
+              <th>User</th>
+              <th style="text-align: center;">Total Orders</th>
+              <th colspan="2" style="text-align: center; border-right: 2px solid #555;">Xanax (XAN)</th>
+              <th colspan="4" style="text-align: center;">Ecstasy (EXTC)</th>
+              <th style="text-align: center;">Active Now</th>
+            </tr>
+            <tr>
+              <th colspan="3"></th>
+              <th style="text-align: center; border-right: 2px solid #555;">Paid</th>
+              <th style="text-align: center; border-right: 2px solid #555;">Payouts</th>
+              <th style="text-align: center;">Paid</th>
+              <th style="text-align: center;">Xanax</th>
+              <th style="text-align: center;">eDVDs</th>
+              <th style="text-align: center;">Ecstasy</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for entry in leaderboard %}
+            <tr class="rank-{{ entry.rank if entry.rank <= 3 else '' }}">
+              <td>
+                {% if entry.rank <= 3 %}
+                  <span class="rank-medal"></span>{{ entry.rank }}
+                {% else %}
+                  #{{ entry.rank }}
+                {% endif %}
+              </td>
+              <td>
+                <div class="user-info">
+                  <div>
+                    <div class="user-name">{{ entry.user_name }}</div>
+                    <div class="user-id">[{{ entry.user_id }}]</div>
+                  </div>
+                </div>
+              </td>
+              <td style="text-align: center;">
+                <strong style="font-size: 16px;">{{ entry.total_orders }}</strong>
+              </td>
+              <td style="text-align: center; border-right: 2px solid #ddd;">
+                <span class="stats-badge">{{ entry.xan_paid }} Ⓧ</span>
+              </td>
+              <td style="text-align: center; border-right: 2px solid #ddd;">
+                <span class="stats-badge">{{ entry.xan_overdose_payout }} Ⓧ</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="stats-badge">{{ entry.extc_paid }} Ⓧ</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="stats-badge">{{ entry.extc_overdose_xanax }} Ⓧ</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="stats-badge">{{ entry.extc_overdose_edvds }} 💿</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="stats-badge">{{ entry.extc_overdose_ecstasy }} 💊</span>
+              </td>
+              <td style="text-align: center;">
+                <span class="stats-badge">{{ entry.active_orders }}</span>
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      {% else %}
+        <div class="card">
+          <p style="color: #666; text-align: center; padding: 40px;">No orders placed yet</p>
+        </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
+</body>
+</html>

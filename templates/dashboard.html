@@ -1,0 +1,96 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Dashboard</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+</head>
+<body>
+  <div class="page">
+    {% include '_navbar.html' %}
+
+    <h1>Dashboard</h1>
+    
+    <div class="flex-row">
+      <div class="cover-card">
+        <div class="timer-section">
+          <p class="timer-label">Xanax Cover Timer</p>
+          <div class="timer" id="timer-xan">00:00:00</div>
+        </div>
+        <h3>Xanax Cover</h3>
+        <div class="cover-buttons">
+          {% if xan_prices %}
+            {% for price in xan_prices[:5] %}
+              <form method="post" action="{{ url_for('place_order') }}" style="margin: 0;">
+                <input type="hidden" name="coverage_type" value="XAN" />
+                <input type="hidden" name="duration" value="{{ price.duration }}" />
+                <button type="submit" class="coverage-btn">
+                  {{ price.duration }}H - {{ price.cost }} Xanax → {{ price.xanax_reward }} Xanax
+                </button>
+              </form>
+            {% endfor %}
+          {% else %}
+            <p style="color: #666; padding: 12px;">No XAN coverage options available</p>
+          {% endif %}
+        </div>
+      </div>
+
+      <div class="cover-card">
+        <div class="timer-section">
+          <p class="timer-label">Ecstasy Cover Timer</p>
+          <div class="timer" id="timer-extc">00:00:00</div>
+        </div>
+        <h3>Ecstasy Cover</h3>
+        <div class="cover-buttons">
+          {% if extc_prices %}
+            {% for price in extc_prices[:5] %}
+              <form method="post" action="{{ url_for('place_order') }}" style="margin: 0;">
+                <input type="hidden" name="coverage_type" value="EXTC" />
+                <input type="hidden" name="duration" value="{{ price.duration }}" />
+                <button type="submit" class="coverage-btn">
+                  {{ price.duration }}J - {{ price.cost }} Xanax → {{ price.xanax_reward }} Xanax, {{ price.edvds_reward }} eDVDs
+                </button>
+              </form>
+            {% endfor %}
+          {% else %}
+            <p style="color: #666; padding: 12px;">No EXTC coverage options available</p>
+          {% endif %}
+        </div>
+      </div>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
+  <script>
+    function updateTimers() {
+      const now = new Date().getTime();
+      {% if active_xan_order %}
+        const xanExpiresAt = new Date('{{ active_xan_order.expires_at.isoformat() }}').getTime();
+        const xanDiff = xanExpiresAt - now;
+        if (xanDiff > 0) {
+          const hours = Math.floor((xanDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((xanDiff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((xanDiff % (1000 * 60)) / 1000);
+          document.getElementById('timer-xan').textContent = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        } else {
+          document.getElementById('timer-xan').textContent = 'Expired';
+        }
+      {% endif %}
+      {% if active_extc_order %}
+        const extcExpiresAt = new Date('{{ active_extc_order.expires_at.isoformat() }}').getTime();
+        const extcDiff = extcExpiresAt - now;
+        if (extcDiff > 0) {
+          const hours = Math.floor((extcDiff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+          const minutes = Math.floor((extcDiff % (1000 * 60 * 60)) / (1000 * 60));
+          const seconds = Math.floor((extcDiff % (1000 * 60)) / 1000);
+          document.getElementById('timer-extc').textContent = String(hours).padStart(2, '0') + ':' + String(minutes).padStart(2, '0') + ':' + String(seconds).padStart(2, '0');
+        } else {
+          document.getElementById('timer-extc').textContent = 'Expired';
+        }
+      {% endif %}
+    }
+    updateTimers();
+    setInterval(updateTimers, 1000);
+  </script>
+</body>
+</html>

@@ -1,0 +1,33 @@
+<header class="navbar">
+  <nav class="nav-left">
+    <a class="nav-btn" href="{{ url_for('home') }}">Home</a>
+    <a class="nav-btn" href="{{ url_for('dashboard') }}">Dashboard</a>
+    {% if session.get('user_id') %}
+      <a class="nav-btn" href="{{ url_for('overdose_page') }}">Overdose</a>
+      <a class="nav-btn" href="{{ url_for('user_history') }}">History</a>
+    {% endif %}
+    {% if user and user.role_id == 3 %}
+      {# Show admin link only for admins (role_id == 3) #}
+      <a class="nav-btn" href="{{ url_for('admin_panel') }}">Admin</a>
+    {% endif %}
+  </nav>
+  <nav class="nav-center">
+    {% if user %}
+      <span id="navbar-username">{{ user.torn_name }} [{{ user.torn_user_id }}]</span>
+    {% elif session.get('user_id') %}
+      <span>Not logged in</span>
+    {% else %}
+      <span>Not logged in</span>
+    {% endif %}
+  </nav>
+  <nav class="nav-right">
+    <button class="dark-mode-toggle" onclick="toggleDarkMode()" aria-label="Toggle dark mode">🌙</button>
+    {% if session.get('user_id') %}
+    <form method="post" action="{{ url_for('logout') }}">
+      <button class="nav-btn" type="submit">Log out</button>
+    </form>
+    {% else %}
+    <a class="nav-btn" href="{{ url_for('home') }}">Log in</a>
+    {% endif %}
+  </nav>
+</header>

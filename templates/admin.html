@@ -1,0 +1,639 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Admin Panel</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+  <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
+  <style>
+    .admin-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; margin-top: 16px; }
+    .stat-card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
+    .stat-number { font-size: 32px; font-weight: 700; color: #0a58ca; }
+    .order-list { max-height: 400px; overflow-y: auto; }
+    .order-item { padding: 12px; border-bottom: 1px solid #eee; }
+    .order-item:last-child { border-bottom: none; }
+    .btn-primary { background: #0a58ca; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+    .btn-primary:hover { background: #084298; }
+    .btn-secondary { background: #6c757d; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+    .btn-success { background: #28a745; color: white; border: none; padding: 10px 20px; border-radius: 8px; cursor: pointer; }
+    .toggle-active { background: #28a745; }
+    .toggle-inactive { background: #6c757d; }
+    table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    th, td { padding: 8px; text-align: left; border-bottom: 1px solid #ddd; }
+    th { background: #f8f9fa; font-weight: 600; }
+    .form-group { margin-bottom: 12px; }
+    .form-group label { display: block; margin-bottom: 4px; font-weight: 600; }
+    .form-group input, select { width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px; box-sizing: border-box; }
+    body.dark-mode .stat-card { background: #2a2a2a; border-color: #444; }
+    body.dark-mode th { background: #333; }
+    body.dark-mode td { border-color: #444; }
+    body.dark-mode .form-group input, body.dark-mode .form-group select { background: #333; color: #e0e0e0; border-color: #555; }
+    body.dark-mode .order-item { border-color: #444; }
+    body.dark-mode .overdose-item { background: #2a2a2a; border-color: #444; color: #e0e0e0; }
+    body.dark-mode .overdose-item.confirmed { background: #1b5e20; border-color: #4caf50; }
+    body.dark-mode .overdose-item.pending { background: #e65100; border-color: #ff9800; }
+    body.dark-mode .btn-primary { background: #0a58ca; }
+    body.dark-mode .btn-primary:hover { background: #084298; }
+    body.dark-mode .btn-secondary { background: #6c757d; }
+    body.dark-mode .btn-danger { background: #dc3545; }
+    body.dark-mode .toggle-slider { background-color: #555; }
+    #manual-activation-info { padding: 12px; background: #f8f9fa; border-radius: 6px; display: none; }
+    body.dark-mode #manual-activation-info { background: #333; color: #e0e0e0; }
+    .btn-danger { background: #dc3545; color: white; border: none; padding: 8px 12px; border-radius: 6px; cursor: pointer; font-size: 12px; }
+    .btn-danger:hover { background: #c82333; }
+    .btn-small { padding: 6px 10px; font-size: 12px; margin-left: 4px; }
+    .order-row { display: flex; justify-content: space-between; align-items: center; }
+    .pricing-row { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 8px; align-items: center; padding: 8px; border-bottom: 1px solid #eee; }
+    .settings-toggle { display: flex; gap: 12px; align-items: center; }
+    .toggle-switch { position: relative; display: inline-block; width: 50px; height: 24px; }
+    .toggle-switch input { display: none; }
+    .toggle-slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .3s; border-radius: 24px; }
+    .toggle-slider:before { position: absolute; content: ""; height: 18px; width: 18px; left: 3px; bottom: 3px; background-color: white; transition: .3s; border-radius: 50%; }
+    input:checked + .toggle-slider { background-color: #28a745; }
+    input:checked + .toggle-slider:before { transform: translateX(26px); }
+    .overdose-section { margin-top: 24px; }
+    .overdose-btn { background: #dc3545; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+    .overdose-btn:hover { background: #c82333; }
+    .overdose-list { max-height: 300px; overflow-y: auto; margin-top: 12px; }
+    .overdose-item { padding: 12px; border: 1px solid #ddd; border-radius: 6px; margin-bottom: 8px; }
+    .overdose-item.confirmed { background: #e8f5e9; border-color: #4caf50; }
+    .overdose-item.pending { background: #fff3e0; border-color: #ff9800; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    {% include '_navbar.html' %}
+
+    <h1>Admin Panel</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="msg {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+    
+    <div style="margin-bottom: 20px; text-align: right;">
+      <a href="{{ url_for('leaderboard') }}" style="display: inline-block; background: #0a58ca; color: white; padding: 10px 20px; border-radius: 8px; text-decoration: none; font-weight: 600;">📊 View Leaderboard</a>
+    </div>
+
+    <div class="admin-grid">
+      <div class="stat-card">
+        <h3>Pending Orders</h3>
+        <div class="stat-number">{{ pending_orders|length }}</div>
+        <form style="margin-top: 16px;">
+          <button type="button" class="btn-success" onclick="checkAndVerifyOrders()">🔍 Verify Pending Orders</button>
+        </form>
+      </div>
+
+      <div class="stat-card">
+        <h3>Active Orders</h3>
+        <div class="stat-number">{{ active_orders|length }}</div>
+        <p style="color: #666; margin-top: 8px;">Currently active insurance coverage</p>
+      </div>
+
+      <div class="stat-card">
+        <h3>Auto-Verification</h3>
+        <div class="stat-number">{{ 'ON' if auto_settings.enabled else 'OFF' }}</div>
+        <form method="post" action="{{ url_for('toggle_auto_verify') }}" style="margin-top: 16px;">
+          <button type="submit" class="btn-primary {{ 'toggle-active' if auto_settings.enabled else 'toggle-inactive' }}">
+            {{ '⏸️ Disable' if auto_settings.enabled else '▶️ Enable' }} Auto-Verify
+          </button>
+        </form>
+        <form method="post" action="{{ url_for('set_auto_interval') }}" style="margin-top: 12px;">
+          <div class="form-group">
+            <label>Check Interval (minutes)</label>
+            <input type="number" name="interval" value="{{ auto_settings.interval_minutes }}" min="1" max="60" required />
+          </div>
+          <button type="submit" class="btn-secondary">Update Interval</button>
+        </form>
+      </div>
+
+      <div class="stat-card">
+        <h3>API Key Configuration</h3>
+        <p style="color: #666; font-size: 12px; margin-bottom: 8px;">Required for order verification to work</p>
+        <form id="api-key-form" style="margin-top: 12px;">
+          <div class="form-group" style="margin-bottom: 8px;">
+            <label>Torn API Key</label>
+            <input type="password" id="api-key-input" placeholder="Enter your Torn API key" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;" />
+          </div>
+          <button type="button" class="btn-primary" style="width: 100%; padding: 10px;" onclick="setAdminApiKey()">Save API Key</button>
+        </form>
+        <div id="api-key-status" style="margin-top: 12px; font-size: 12px; color: #666;"></div>
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+      <h2>🔧 Manual Cover Activation</h2>
+      <p style="color: #666; font-size: 14px; margin-bottom: 16px;">Manually activate coverage for a user (useful for testing or if the site is broken)</p>
+      
+      <form id="manual-activation-form" style="display: grid; gap: 12px;">
+        <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 12px;">
+          <div class="form-group">
+            <label>Select Pending Order</label>
+            <select id="manual-order-select" style="width: 100%; padding: 8px; border: 1px solid #ccc; border-radius: 6px;" required onchange="updateManualActivationInfo()">
+              <option value="">Loading pending orders...</option>
+            </select>
+          </div>
+          <div class="form-group" style="align-self: flex-end;">
+            <button type="button" class="btn-primary" onclick="activateManualCover()">Activate</button>
+          </div>
+        </div>
+        <div id="manual-activation-info">
+          <p><strong>User:</strong> <span id="manual-info-user">N/A</span></p>
+          <p><strong>Coverage Type:</strong> <span id="manual-info-type">N/A</span></p>
+          <p><strong>Duration:</strong> <span id="manual-info-duration">N/A</span></p>
+          <p><strong>Payment:</strong> <span id="manual-info-payment">N/A</span></p>
+        </div>
+      </form>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+      <h2>📋 Pending Orders</h2>
+      <div class="order-list">
+        {% if pending_orders %}
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Type</th>
+                <th>Payment</th>
+                <th>Created</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in pending_orders %}
+              <tr>
+                <td>{{ order.user.torn_name }} [{{ order.user.torn_user_id }}]</td>
+                <td>{{ order.coverage_type }} - {{ order.hours if order.coverage_type == 'XAN' else order.jumps }}{{ 'H' if order.coverage_type == 'XAN' else 'J' }}</td>
+                <td>{{ order.xanax_payment }} Xanax</td>
+                <td>{{ order.created_at.strftime('%m/%d %H:%M') if order.created_at else 'N/A' }}</td>
+                <td>
+                  <button class="btn-danger btn-small" onclick="deleteOrder({{ order.id }})">Delete</button>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p style="color: #666;">No pending orders</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+      <h2>✅ Active Orders</h2>
+      <div class="order-list">
+        {% if active_orders %}
+          <table>
+            <thead>
+              <tr>
+                <th>User</th>
+                <th>Type</th>
+                <th>Duration</th>
+                <th>Cost</th>
+                <th>Reward</th>
+                <th>Expires</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in active_orders %}
+              <tr>
+                <td>{{ order.user.torn_name }} [{{ order.user.torn_user_id }}]</td>
+                <td>{{ order.coverage_type }}</td>
+                <td>{{ order.hours if order.coverage_type == 'XAN' else order.jumps }}{{ 'H' if order.coverage_type == 'XAN' else 'J' }}</td>
+                <td>{{ order.xanax_payment }} Xanax</td>
+                <td>
+                  {% if order.coverage_type == 'XAN' %}
+                    {{ order.xanax_reward }} Xanax
+                  {% else %}
+                    {{ order.xanax_reward }} Xanax, {{ order.edvds_reward }} eDVDs, {{ order.ecstasy_reward }} Ecstasy
+                  {% endif %}
+                </td>
+                <td>{{ order.expires_at.strftime('%m/%d %H:%M') if order.expires_at else 'N/A' }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <p style="color: #666;">No active orders</p>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card" style="margin-top: 24px;">
+      <h2>💰 Pricing Configuration</h2>
+      
+      <h3>XAN Insurance Pricing</h3>
+      <form method="post" action="{{ url_for('add_xan_pricing') }}">
+        <div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px;">
+          <div class="form-group">
+            <label>Hours</label>
+            <input type="number" name="hours" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>Cost (Xanax)</label>
+            <input type="number" name="cost" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>Reward (Xanax)</label>
+            <input type="number" name="reward" min="1" required />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Add XAN Pricing</button>
+      </form>
+
+      <table style="margin-top: 16px;">
+        <thead>
+          <tr>
+            <th>Duration</th>
+            <th>Cost</th>
+            <th>Reward</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for price in xan_prices %}
+          <tr>
+            <td>{{ price.duration }}H</td>
+            <td>{{ price.cost }} Xanax</td>
+            <td>{{ price.xanax_reward }} Xanax</td>
+            <td>
+              <button class="btn-danger btn-small" onclick="deletePricing({{ price.id }})">Delete</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <h3 style="margin-top: 24px;">EXTC Insurance Pricing</h3>
+      <form method="post" action="{{ url_for('add_extc_pricing') }}">
+        <div style="display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px;">
+          <div class="form-group">
+            <label>Jumps</label>
+            <input type="number" name="jumps" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>Cost (Xanax)</label>
+            <input type="number" name="cost" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>Xanax Reward</label>
+            <input type="number" name="xanax_reward" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>eDVDs Reward</label>
+            <input type="number" name="edvds_reward" min="1" required />
+          </div>
+          <div class="form-group">
+            <label>Ecstasy Reward</label>
+            <input type="number" name="ecstasy_reward" min="1" required />
+          </div>
+        </div>
+        <button type="submit" class="btn-primary">Add EXTC Pricing</button>
+      </form>
+
+      <table style="margin-top: 16px;">
+        <thead>
+          <tr>
+            <th>Jumps</th>
+            <th>Cost</th>
+            <th>Xanax</th>
+            <th>eDVDs</th>
+            <th>Ecstasy</th>
+            <th>Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for price in extc_prices %}
+          <tr>
+            <td>{{ price.duration }}J</td>
+            <td>{{ price.cost }} Xanax</td>
+            <td>{{ price.xanax_reward }} Xanax</td>
+            <td>{{ price.edvds_reward }} eDVDs</td>
+            <td>{{ price.ecstasy_reward }} Ecstasy</td>
+            <td>
+              <button class="btn-danger btn-small" onclick="deletePricing({{ price.id }})">Delete</button>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+
+    <div class="card overdose-section">
+      <h2>⚠️ Overdose Reports</h2>
+      <div class="overdose-list">
+        {% if recent_overdoses %}
+          {% for overdose in recent_overdoses %}
+            <div class="overdose-item {{ 'confirmed' if overdose.confirmed else 'pending' }}" id="overdose-{{ overdose.id }}">
+              <div style="display: flex; justify-content: space-between; align-items: start;">
+                <div>
+                  <strong>{{ overdose.user.torn_name }} [{{ overdose.user.torn_user_id }}] - {{ overdose.coverage_type or 'N/A' }}</strong>
+                  <p style="margin: 4px 0; font-size: 12px; color: #666;">Reported: {{ overdose.reported_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                  {% if overdose.confirmed %}
+                    <p style="margin: 4px 0; font-size: 12px;"><strong>Payout:</strong> {{ overdose.payout_details }}</p>
+                    <p style="margin: 4px 0; font-size: 12px;"><strong>Status:</strong> Confirmed</p>
+                    {% if overdose.notes %}<p style="margin: 4px 0; font-size: 12px;"><strong>Notes:</strong> {{ overdose.notes }}</p>{% endif %}
+                  {% else %}
+                    <button class="btn-primary btn-small" onclick="confirmOverdose({{ overdose.id }}, '{{ overdose.coverage_type or '' }}')">Confirm & Payout</button>
+                  {% endif %}
+                </div>
+                <button class="btn-danger btn-small" onclick="deleteOverdose({{ overdose.id }})">Delete</button>
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p style="color: #666;">No overdose reports</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function setAdminApiKey() {
+      const apiKey = document.getElementById('api-key-input').value.trim();
+      const statusElement = document.getElementById('api-key-status');
+      
+      if (!apiKey) {
+        statusElement.textContent = '❌ API key cannot be empty';
+        statusElement.style.color = '#dc3545';
+        return;
+      }
+      
+      if (apiKey.length < 8) {
+        statusElement.textContent = '❌ API key must be at least 8 characters';
+        statusElement.style.color = '#dc3545';
+        return;
+      }
+      
+      fetch('/admin/set-api-key', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ api_key: apiKey })
+      })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            statusElement.textContent = '✅ API key saved successfully';
+            statusElement.style.color = '#28a745';
+            document.getElementById('api-key-input').value = '';
+            setTimeout(() => {
+              statusElement.textContent = '';
+            }, 3000);
+          } else {
+            statusElement.textContent = '❌ Error: ' + (d.error || 'Unknown error');
+            statusElement.style.color = '#dc3545';
+          }
+        })
+        .catch(e => {
+          statusElement.textContent = '❌ Error: ' + e;
+          statusElement.style.color = '#dc3545';
+        });
+    }
+
+    function checkAndVerifyOrders() {
+      // First, auto-detect pending orders
+      fetch('/admin/orders/pending-to-verify')
+        .then(r => r.json())
+        .then(data => {
+          if (data.count === 0) {
+            alert('No pending orders to verify.');
+            return;
+          }
+          
+          // Build confirmation message
+          let msg = `Found ${data.count} pending order(s):\n\n`;
+          data.orders.forEach(order => {
+            msg += `• ${order.user_name} [${order.user_id}]: ${order.coverage_type} ${order.duration}${order.duration_unit} (${order.payment} Xanax)\n`;
+          });
+          msg += `\nProceed with verification?`;
+          
+          // Show confirmation popup
+          if (confirm(msg)) {
+            // Proceed with verification
+            fetch('/admin/verify-orders-confirm', { method: 'POST' })
+              .then(r => r.json())
+              .then(result => {
+                if (result.success) {
+                  alert(`✅ Verified: ${result.verified}\n❌ Failed: ${result.failed}`);
+                  location.reload();
+                } else {
+                  alert('Error: ' + result.error);
+                }
+              })
+              .catch(e => alert('Error: ' + e));
+          }
+        })
+        .catch(e => alert('Error fetching orders: ' + e));
+    }
+
+    function deleteOrder(orderId) {
+      if (confirm('Delete this pending order?')) {
+        fetch('/admin/order/' + orderId, { method: 'DELETE' })
+          .then(r => r.json())
+          .then(d => {
+            if (d.success) {
+              alert('Order deleted');
+              location.reload();
+            } else {
+              alert('Error: ' + d.error);
+            }
+          })
+          .catch(e => alert('Error: ' + e));
+      }
+    }
+
+    function activateManualCover() {
+      const selectElement = document.getElementById('manual-order-select');
+      const selectedValue = selectElement.value;
+      
+      if (!selectedValue) {
+        alert('Please select a pending order');
+        return;
+      }
+      
+      const orderData = JSON.parse(selectedValue);
+      
+      if (confirm(`Activate ${orderData.coverage_type} cover for ${orderData.user_name} (${orderData.duration} ${orderData.duration_unit})?`)) {
+        fetch('/admin/order/activate-manual', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            user_id: orderData.user_db_id,
+            coverage_type: orderData.coverage_type,
+            duration: orderData.duration
+          })
+        })
+          .then(r => r.json())
+          .then(d => {
+            if (d.success) {
+              alert('Cover activated successfully');
+              location.reload();
+            } else {
+              alert('Error: ' + d.error);
+            }
+          })
+          .catch(e => alert('Error: ' + e));
+      }
+    }
+    
+    function updateManualActivationInfo() {
+      const selectElement = document.getElementById('manual-order-select');
+      const selectedValue = selectElement.value;
+      
+      if (!selectedValue) {
+        document.getElementById('manual-activation-info').style.display = 'none';
+        return;
+      }
+      
+      try {
+        const orderData = JSON.parse(selectedValue);
+        document.getElementById('manual-info-user').textContent = `${orderData.user_name} [${orderData.user_torn_id}]`;
+        document.getElementById('manual-info-type').textContent = orderData.coverage_type;
+        document.getElementById('manual-info-duration').textContent = `${orderData.duration}${orderData.duration_unit}`;
+        document.getElementById('manual-info-payment').textContent = `${orderData.payment} Xanax`;
+        document.getElementById('manual-activation-info').style.display = 'block';
+      } catch (e) {
+        console.error('Error parsing order data:', e);
+      }
+    }
+    
+    function loadPendingOrdersDropdown() {
+      fetch('/admin/pending-orders-list')
+        .then(r => {
+          if (!r.ok) {
+            throw new Error(`HTTP error! status: ${r.status}`);
+          }
+          return r.json();
+        })
+        .then(d => {
+          const selectElement = document.getElementById('manual-order-select');
+          if (!selectElement) {
+            console.error('manual-order-select element not found');
+            return;
+          }
+          
+          selectElement.innerHTML = '';
+          
+          if (d.orders && d.orders.length > 0) {
+            const optionDefault = document.createElement('option');
+            optionDefault.value = '';
+            optionDefault.text = `Select a pending order (${d.orders.length} available)`;
+            selectElement.appendChild(optionDefault);
+            
+            d.orders.forEach(order => {
+              const option = document.createElement('option');
+              option.value = JSON.stringify(order);
+              option.text = `${order.user_name} [${order.user_torn_id}] - ${order.coverage_type} ${order.duration}${order.duration_unit} (${order.payment} Xanax)`;
+              selectElement.appendChild(option);
+            });
+          } else {
+            const optionDefault = document.createElement('option');
+            optionDefault.value = '';
+            optionDefault.text = 'No pending orders available';
+            selectElement.appendChild(optionDefault);
+          }
+        })
+        .catch(e => {
+          console.error('Error loading pending orders:', e);
+          const selectElement = document.getElementById('manual-order-select');
+          if (selectElement) {
+            selectElement.innerHTML = '<option value="">Error loading orders</option>';
+          }
+        });
+    }
+    
+    // Load pending orders dropdown on page load
+    document.addEventListener('DOMContentLoaded', loadPendingOrdersDropdown);
+
+    function deletePricing(pricingId) {
+      if (confirm('Delete this pricing option?')) {
+        fetch('/admin/pricing/' + pricingId, { method: 'DELETE' })
+          .then(r => r.json())
+          .then(d => {
+            if (d.success) {
+              alert('Pricing deleted');
+              location.reload();
+            } else {
+              alert('Error: ' + d.error);
+            }
+          })
+          .catch(e => alert('Error: ' + e));
+      }
+    }
+
+    function toggleAutoDelete() {
+      const enabled = document.getElementById('auto-delete-toggle').checked;
+      updateAutoDelete(enabled);
+    }
+
+    function updateAutoDelete(enabled) {
+      const hours = parseInt(document.getElementById('auto-delete-hours').value) || 24;
+      const isEnabled = document.getElementById('auto-delete-toggle').checked;
+      
+      fetch('/admin/settings/auto-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          enabled: isEnabled,
+          auto_delete_hours: hours
+        })
+      })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            alert('Auto-delete settings updated');
+            location.reload();
+          } else {
+            alert('Error: ' + d.error);
+          }
+        })
+        .catch(e => alert('Error: ' + e));
+    }
+
+    function confirmOverdose(overdoseId, coverageType) {
+      const notes = prompt(`Confirm overdose for ${coverageType}?\nPayout will be taken from the active cover.\nNotes (optional):`);
+      if (notes === null) return;
+      
+      fetch('/admin/overdose/confirm', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          overdose_id: overdoseId,
+          notes: notes || ''
+        })
+      })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            alert(`✅ Overdose confirmed with payout: ${d.payout}`);
+            location.reload();
+          } else {
+            alert('Error: ' + d.error);
+          }
+        })
+        .catch(e => alert('Error: ' + e));
+    }
+
+    function deleteOverdose(overdoseId) {
+      if (confirm('Delete this overdose report?')) {
+        fetch('/admin/overdose/' + overdoseId, { method: 'DELETE' })
+          .then(r => r.json())
+          .then(d => {
+            if (d.success) {
+              alert('Overdose deleted');
+              location.reload();
+            } else {
+              alert('Error: ' + d.error);
+            }
+          })
+          .catch(e => alert('Error: ' + e));
+      }
+    }
+  </script>
+</body>
+</html>

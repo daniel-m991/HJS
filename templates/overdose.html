@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Overdose Report</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+  <style>
+    .overdose-section { margin-top: 24px; }
+    .report-btn { background: #dc3545; color: white; border: none; padding: 12px 24px; border-radius: 8px; cursor: pointer; font-size: 16px; }
+    .report-btn:hover { background: #c82333; }
+    .overdose-list { max-height: 500px; overflow-y: auto; margin-top: 16px; }
+    .overdose-item { padding: 12px; border: 1px solid #ddd; border-radius: 8px; margin-bottom: 8px; background: white; }
+    .overdose-confirmed { background: #e8f5e9; border-color: #4caf50; }
+    .overdose-pending { background: #fff3e0; border-color: #ff9800; }
+    .overdose-header { display: flex; justify-content: space-between; align-items: center; font-weight: 600; margin-bottom: 8px; }
+    .overdose-status { display: inline-block; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .status-confirmed { background: #4caf50; color: white; }
+    .status-pending { background: #ff9800; color: white; }
+    .overdose-details { font-size: 14px; color: #666; }
+    .overdose-details p { margin: 4px 0; }
+    .payout { color: #0a58ca; font-weight: 600; }
+    
+    body.dark-mode .overdose-item { background: #2a2a2a; border-color: #444; color: #e0e0e0; }
+    body.dark-mode .overdose-confirmed { background: #1b5e20; border-color: #4caf50; }
+    body.dark-mode .overdose-pending { background: #e65100; border-color: #ff9800; }
+    body.dark-mode .overdose-details { color: #999; }
+    body.dark-mode .payout { color: #4db8ff; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    {% include '_navbar.html' %}
+
+    <h1>Overdose Report</h1>
+
+    <div class="card overdose-section">
+      <h3>Report Overdose</h3>
+      <p>If you've overdosed, click the button below to report it immediately.</p>
+      
+      {% if active_xan or active_extc %}
+        {% if active_xan and active_extc %}
+          <p style="color: #666; font-size: 14px; margin-bottom: 12px;">You have active coverage for both. Choose which one:</p>
+          <div style="display: flex; gap: 12px;">
+            <button id="btn-xan" class="report-btn" onclick="reportOverdose('XAN')">Report Xanax Overdose</button>
+            <button id="btn-extc" class="report-btn" onclick="reportOverdose('EXTC')">Report Ecstasy Overdose</button>
+          </div>
+        {% elif active_xan %}
+          <button id="btn-xan" class="report-btn" onclick="reportOverdose('XAN')">Report Xanax Overdose</button>
+        {% else %}
+          <button id="btn-extc" class="report-btn" onclick="reportOverdose('EXTC')">Report Ecstasy Overdose</button>
+        {% endif %}
+        <div id="limit-warning" style="margin-top: 12px; padding: 12px; background: #fff3cd; border: 1px solid #ffc107; border-radius: 6px; display: none;">
+          <p id="limit-message" style="margin: 0; color: #856404;"></p>
+        </div>
+      {% else %}
+        <p style="color: #dc3545; font-weight: 600;">You don't have active coverage. Cannot report overdose.</p>
+      {% endif %}
+    </div>
+
+    <div class="card overdose-section">
+      <h3>Recent Overdoses</h3>
+      <div class="overdose-list">
+        {% if recent_overdoses %}
+          {% for overdose in recent_overdoses %}
+            <div class="overdose-item {% if overdose.confirmed %}overdose-confirmed{% else %}overdose-pending{% endif %}" id="overdose-{{ overdose.id }}">
+              <div class="overdose-header">
+                <span>{{ overdose.user.torn_name }} [{{ overdose.user.torn_user_id }}] - {{ overdose.coverage_type or 'N/A' }}</span>
+                <span class="overdose-status {% if overdose.confirmed %}status-confirmed{% else %}status-pending{% endif %}">
+                  {% if overdose.confirmed %}Confirmed{% else %}Pending{% endif %}
+                </span>
+              </div>
+              <div class="overdose-details">
+                <p><strong>Reported:</strong> {{ overdose.reported_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                {% if overdose.confirmed %}
+                  <p><strong>Confirmed:</strong> {{ overdose.confirmed_at.strftime('%Y-%m-%d %H:%M:%S') }}</p>
+                  <p class="payout"><strong>Payout:</strong> {{ overdose.payout_details if overdose.payout_details else overdose.payout }}</p>
+                  {% if overdose.notes %}
+                    <p><strong>Notes:</strong> {{ overdose.notes }}</p>
+                  {% endif %}
+                {% endif %}
+              </div>
+            </div>
+          {% endfor %}
+        {% else %}
+          <p style="color: #666; padding: 12px;">No overdose reports yet</p>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
+  <script>
+    // Check reporting limits on page load
+    window.addEventListener('load', function() {
+      checkReportingLimits();
+    });
+
+    function checkReportingLimits() {
+      fetch('{{ url_for("check_overdose_limits") }}')
+        .then(r => r.json())
+        .then(data => {
+          const btnXan = document.getElementById('btn-xan');
+          const btnExtc = document.getElementById('btn-extc');
+          const warningDiv = document.getElementById('limit-warning');
+          const warningMsg = document.getElementById('limit-message');
+          
+          if (!btnXan && !btnExtc) return; // No buttons to update
+          
+          let anyDisabled = false;
+          
+          // Update Xanax button
+          if (btnXan) {
+            if (data.can_report_xan) {
+              btnXan.disabled = false;
+              btnXan.style.opacity = '1';
+              btnXan.style.cursor = 'pointer';
+            } else {
+              btnXan.disabled = true;
+              btnXan.style.opacity = '0.5';
+              btnXan.style.cursor = 'not-allowed';
+              anyDisabled = true;
+            }
+          }
+          
+          // Update Ecstasy button
+          if (btnExtc) {
+            if (data.can_report_extc) {
+              btnExtc.disabled = false;
+              btnExtc.style.opacity = '1';
+              btnExtc.style.cursor = 'pointer';
+            } else {
+              btnExtc.disabled = true;
+              btnExtc.style.opacity = '0.5';
+              btnExtc.style.cursor = 'not-allowed';
+              anyDisabled = true;
+            }
+          }
+          
+          // Show warning if any button is disabled
+          if (anyDisabled) {
+            warningDiv.style.display = 'block';
+            let messages = [];
+            if (btnExtc && !data.can_report_extc) {
+              messages.push('You have already reported an Ecstasy overdose for this order');
+            }
+            if (btnXan && !data.can_report_xan) {
+              const hoursRemaining = data.hours_until_next_xan;
+              messages.push(`Xanax overdose reports limited to once per 4 hours (${hoursRemaining.toFixed(1)}h remaining)`);
+            }
+            warningMsg.textContent = messages.join('. ');
+          } else {
+            warningDiv.style.display = 'none';
+          }
+        })
+        .catch(e => console.error('Error checking limits:', e));
+    }
+
+    function reportOverdose(coverageType) {
+      // Re-check limits before submitting
+      fetch('{{ url_for("check_overdose_limits") }}')
+        .then(r => r.json())
+        .then(data => {
+          const canReport = (coverageType === 'XAN' && data.can_report_xan) || 
+                          (coverageType === 'EXTC' && data.can_report_extc);
+          
+          if (!canReport) {
+            let msg = coverageType === 'EXTC' 
+              ? 'You have already reported an Ecstasy overdose for this order'
+              : `You can only report Xanax overdose once per 4 hours (${data.hours_until_next_xan.toFixed(1)}h remaining)`;
+            alert('Cannot report: ' + msg);
+            return;
+          }
+          
+          if (confirm('Are you sure you want to report an overdose?')) {
+            fetch('{{ url_for("report_overdose") }}', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ coverage_type: coverageType })
+            })
+            .then(r => r.json())
+            .then(d => {
+              if (d.success) {
+                alert('Overdose reported! Admin will confirm.');
+                location.reload();
+              } else if (d.has_xan && d.has_extc) {
+                alert('Please choose which coverage: Xanax or Ecstasy');
+              } else {
+                alert('Error: ' + d.error);
+              }
+            })
+            .catch(e => alert('Error: ' + e));
+          }
+        });
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Torn Tool - Login</title>
+  <style>
+    body { font-family: system-ui, sans-serif; margin: 0; padding: 0; background: #fff; color: #222; transition: background 0.3s, color 0.3s; }
+    .navbar { position: sticky; top: 0; left: 0; width: 100%; display: flex; justify-content: space-between; align-items: center; padding: 12px 24px; border-bottom: 1px solid #ccc; background: #f2f2f2; box-sizing: border-box; z-index: 10; }
+    nav { display: flex; gap: 12px; align-items: center; }
+    .nav-center { flex: 1; display: flex; justify-content: center; align-items: center; font-weight: 500; }
+    .nav-btn { display: inline-block; padding: 8px 14px; border: 1px solid #bbb; border-radius: 8px; text-decoration: none; color: #222; background: white; }
+    .nav-btn:hover { background: #f7f7f7; }
+    .dark-mode-toggle { background: transparent; border: none; font-size: 20px; cursor: pointer; padding: 4px; }
+    .page { max-width: 980px; margin: 32px auto; padding: 0 16px; box-sizing: border-box; }
+    .card { border: 1px solid #ddd; border-radius: 12px; padding: 16px; }
+    input { width: 100%; padding: 10px; font-size: 16px; }
+    button { padding: 10px 14px; font-size: 16px; cursor: pointer; }
+    .msg { margin: 10px 0; padding: 10px; border-radius: 10px; }
+    .error { background: #ffe8e8; border: 1px solid #ffb8b8; }
+    .success { background: #e8ffef; border: 1px solid #b8ffd0; }
+    .hint { color: #555; font-size: 14px; }
+    
+    body.dark-mode { background: #1a1a1a; color: #e0e0e0; }
+    body.dark-mode .navbar { background: #2a2a2a; border-color: #444; }
+    body.dark-mode .nav-btn { background: #333; color: #e0e0e0; border-color: #555; }
+    body.dark-mode .nav-btn:hover { background: #444; }
+    body.dark-mode .nav-center { color: #e0e0e0; }
+    body.dark-mode .card { background: #2a2a2a; border-color: #444; }
+    body.dark-mode input { background: #333; color: #e0e0e0; border-color: #555; }
+    body.dark-mode button { background: #0a58ca; color: white; border: 1px solid #0a58ca; }
+    body.dark-mode button:hover { background: #084298; }
+    body.dark-mode .hint { color: #999; }
+  </style>
+</head>
+<body>
+  {% include '_navbar.html' %}
+  <div class="page">
+    <h1>Torn Tool</h1>
+
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        {% for category, message in messages %}
+          <div class="msg {{ category }}">{{ message }}</div>
+        {% endfor %}
+      {% endif %}
+    {% endwith %}
+
+    <div class="card">
+      <h2>Login</h2>
+      <p class="hint">
+        Paste your Torn API key to log in. For safety, this app stores only your Torn user ID and name (not your key).
+      </p>
+
+      <form method="post" action="{{ url_for('login') }}">
+        <label for="api_key">Torn API Key</label><br />
+        <input id="api_key" name="api_key" type="password" autocomplete="off" required />
+        <div style="height: 12px"></div>
+        <button type="submit">Log in</button>
+      </form>
+    </div>
+  </div>
+  <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
+</body>
+</html>

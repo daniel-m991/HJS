@@ -1,0 +1,145 @@
+/* Home Page Styles */
+body {
+  font-family: system-ui, sans-serif;
+  margin: 0;
+  padding: 0;
+  background: #fff;
+  color: #222;
+  transition: background 0.3s, color 0.3s;
+}
+
+.page {
+  width: 90%;
+  margin: 0 auto;
+  box-sizing: border-box;
+}
+
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid #ccc;
+  border-radius: 0 0 12px 12px;
+  background: #f2f2f2;
+  margin-bottom: 24px;
+}
+
+nav {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
+.nav-btn {
+  display: inline-block;
+  padding: 8px 14px;
+  border: 1px solid #bbb;
+  border-radius: 8px;
+  text-decoration: none;
+  color: #222;
+  background: white;
+  cursor: pointer;
+  font-size: 16px;
+}
+
+.nav-btn:hover {
+  background: #f7f7f7;
+}
+
+.dark-mode-toggle {
+  background: transparent;
+  border: none;
+  font-size: 20px;
+  cursor: pointer;
+  padding: 4px;
+}
+
+.card {
+  border: 1px solid #ddd;
+  border-radius: 12px;
+  padding: 16px;
+  background: white;
+}
+
+input {
+  width: 100%;
+  padding: 10px;
+  font-size: 16px;
+  border: 1px solid #ccc;
+  border-radius: 6px;
+  box-sizing: border-box;
+}
+
+button {
+  padding: 10px 14px;
+  font-size: 16px;
+  cursor: pointer;
+}
+
+.msg {
+  margin: 10px 0;
+  padding: 10px;
+  border-radius: 10px;
+}
+
+.error {
+  background: #ffe8e8;
+  border: 1px solid #ffb8b8;
+}
+
+.success {
+  background: #e8ffef;
+  border: 1px solid #b8ffd0;
+}
+
+.hint {
+  color: #555;
+  font-size: 14px;
+}
+
+/* Dark Mode Styles */
+body.dark-mode {
+  background: #1a1a1a;
+  color: #e0e0e0;
+}
+
+body.dark-mode .navbar {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+body.dark-mode .nav-btn {
+  background: #333;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.dark-mode .nav-btn:hover {
+  background: #444;
+}
+
+body.dark-mode .card {
+  background: #2a2a2a;
+  border-color: #444;
+}
+
+body.dark-mode input {
+  background: #333;
+  color: #e0e0e0;
+  border-color: #555;
+}
+
+body.dark-mode .hint {
+  color: #aaa;
+}
+
+body.dark-mode .error {
+  background: #4a2020;
+  border-color: #662020;
+}
+
+body.dark-mode .success {
+  background: #204a20;
+  border-color: #206620;
+}

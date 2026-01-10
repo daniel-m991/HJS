@@ -1,0 +1,210 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>My History</title>
+  <link rel="stylesheet" href="{{ url_for('static', filename='css/dashboard.css') }}" />
+  <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
+  <style>
+    .history-container { max-width: 1200px; margin: 0 auto; padding: 20px; }
+    .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 16px; margin: 20px 0; }
+    .stat-card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 16px; text-align: center; }
+    .stat-number { font-size: 32px; font-weight: 700; color: #0a58ca; margin: 8px 0; }
+    .stat-label { color: #666; font-size: 14px; }
+    body.dark-mode .stat-card { background: #2a2a2a; border-color: #444; }
+    body.dark-mode .stat-label { color: #999; }
+    .card { background: white; border: 1px solid #ddd; border-radius: 12px; padding: 20px; margin-bottom: 20px; }
+    body.dark-mode .card { background: #2a2a2a; border-color: #444; }
+    .card h2 { margin-top: 0; color: #333; }
+    body.dark-mode .card h2 { color: #e0e0e0; }
+    .order-table, .overdose-table { width: 100%; border-collapse: collapse; margin-top: 12px; }
+    .order-table th, .overdose-table th { background: #f8f9fa; padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd; }
+    .order-table td, .overdose-table td { padding: 12px; border-bottom: 1px solid #ddd; }
+    .order-table tbody tr:hover, .overdose-table tbody tr:hover { background: #f8f9fa; }
+    body.dark-mode .order-table th, body.dark-mode .overdose-table th { background: #333; border-color: #555; }
+    body.dark-mode .order-table td, body.dark-mode .overdose-table td { border-color: #444; color: #e0e0e0; }
+    body.dark-mode .order-table tbody tr:hover, body.dark-mode .overdose-table tbody tr:hover { background: #333; }
+    .badge { display: inline-block; background: #e9ecef; color: #333; padding: 4px 8px; border-radius: 4px; font-size: 12px; font-weight: 600; }
+    .badge.xan { background: #cfe2ff; color: #084298; }
+    .badge.extc { background: #f8d7da; color: #842029; }
+    .badge.active { background: #d1e7dd; color: #0f5132; }
+    .badge.pending { background: #fff3cd; color: #664d03; }
+    .badge.confirmed { background: #d1e7dd; color: #0f5132; }
+    .badge.expired { background: #e2e3e5; color: #41464b; }
+    body.dark-mode .badge { background: #444; color: #e0e0e0; }
+    .text-muted { color: #666; font-size: 12px; }
+    body.dark-mode .text-muted { color: #999; }
+    .empty-message { color: #666; text-align: center; padding: 40px; }
+    body.dark-mode .empty-message { color: #999; }
+    .summary-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 16px; }
+    .summary-section { margin-bottom: 20px; }
+    .summary-section h3 { margin-top: 0; font-size: 16px; margin-bottom: 16px; }
+    .summary-box { background: #f8f9fa; padding: 16px; border-radius: 8px; border-left: 4px solid; margin: 10px 0; }
+    .summary-box h4 { margin: 0 0 12px 0; font-weight: 600; font-size: 16px; }
+    .summary-box p { margin: 8px 0; font-size: 14px; }
+    .summary-box .label { display: inline-block; width: 100px; }
+    .summary-box.xan { border-color: #0a58ca; }
+    .summary-box.extc { border-color: #dc3545; }
+    body.dark-mode .summary-box { background: #2a2a2a; color: #e0e0e0; }
+    body.dark-mode .summary-box h4 { color: #fff; }
+    body.dark-mode .summary-box p { color: #d0d0d0; }
+  </style>
+</head>
+<body>
+  <div class="page">
+    {% include '_navbar.html' %}
+    
+    <div class="history-container">
+      <div class="card">
+        <h1>📊 My History</h1>
+        <p style="color: #666;">View your order and overdose history</p>
+      </div>
+
+      <!-- Statistics -->
+      <div class="stats-grid">
+        <div class="stat-card">
+          <div class="stat-label">Total Orders</div>
+          <div class="stat-number">{{ order_stats.total_orders or 0 }}</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Xanax Paid</div>
+          <div class="stat-number" style="font-size: 24px;">{{ order_stats.xan_paid or 0 }} Ⓧ</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Ecstasy Paid</div>
+          <div class="stat-number" style="font-size: 24px;">{{ order_stats.extc_paid or 0 }} Ⓧ</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-label">Total Spent</div>
+          <div class="stat-number" style="font-size: 24px;">{{ order_stats.total_spent or 0 }} Ⓧ</div>
+        </div>
+      </div>
+
+      <!-- Overdose Summary by Type -->
+      {% if overdose_summary %}
+      <div class="card">
+        <h2>⚠️ Overdose Summary by Type</h2>
+        <div class="summary-grid">
+          {% for coverage_type, stats in overdose_summary.items() %}
+          <div class="summary-box {% if coverage_type == 'XAN' %}xan{% else %}extc{% endif %}">
+            <h4>{{ coverage_type }} Coverage</h4>
+            <div>
+              <p><span class="label">Total Reports:</span> <strong>{{ stats.total_reports }}</strong></p>
+              <p><span class="label">Confirmed:</span> <strong>{{ stats.confirmed_count }}</strong></p>
+              {% if coverage_type == 'XAN' %}
+                <p><span class="label">Total Payouts:</span> <strong>{{ stats.xan_payout }} Ⓧ</strong></p>
+              {% else %}
+                <p><span class="label">Xanax:</span> <strong>{{ stats.xan_payout }} Ⓧ</strong></p>
+                <p><span class="label">eDVDs:</span> <strong>{{ stats.edvds_payout }} 💿</strong></p>
+                <p><span class="label">Ecstasy:</span> <strong>{{ stats.ecstasy_payout }} 💊</strong></p>
+              {% endif %}
+            </div>
+          </div>
+          {% endfor %}
+        </div>
+      </div>
+      {% endif %}
+
+      <!-- Orders Section -->
+      <div class="card">
+        <h2>📋 Order History</h2>
+        {% if all_orders %}
+          <table class="order-table">
+            <thead>
+              <tr>
+                <th>Date</th>
+                <th>Type</th>
+                <th>Duration</th>
+                <th>Cost</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for order in all_orders %}
+              <tr>
+                <td>{{ order.created_at.strftime('%Y-%m-%d %H:%M') }}</td>
+                <td><span class="badge {% if order.coverage_type == 'XAN' %}xan{% else %}extc{% endif %}">{{ order.coverage_type }}</span></td>
+                <td>{{ order.hours if order.coverage_type == 'XAN' else order.jumps }}{{ 'H' if order.coverage_type == 'XAN' else 'J' }}</td>
+                <td>{{ order.xanax_payment }} Ⓧ</td>
+                <td><span class="badge {% if order.status == 'active' %}active{% elif order.status == 'pending' %}pending{% elif order.status == 'expired' %}expired{% else %}{{ order.status }}{% endif %}">{{ order.status|capitalize }}</span></td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        {% else %}
+          <div class="empty-message">No orders yet</div>
+        {% endif %}
+      </div>
+
+      <!-- Overdose Section -->
+      {% if all_overdoses is defined and all_overdoses|length > 0 %}
+      <div class="card">
+        <h2>⚠️ Overdose History</h2>
+        
+        <!-- Overdose Statistics -->
+        {% if overdose_summary %}
+        <div class="summary-section">
+          <h3>Summary by Type</h3>
+          <div class="summary-grid">
+            {% for coverage_type, stats in overdose_summary.items() %}
+            <div class="summary-box {% if coverage_type == 'XAN' %}xan{% else %}extc{% endif %}">
+              <h4>{{ coverage_type }}</h4>
+              <p><span class="label">Total Reports:</span> <strong>{{ stats.total_reports }}</strong></p>
+              <p><span class="label">Confirmed:</span> <strong>{{ stats.confirmed_count }}</strong></p>
+              {% if coverage_type == 'XAN' %}
+                <p><span class="label">Total Payouts:</span> <strong>{{ stats.xan_payout }} Ⓧ</strong></p>
+              {% else %}
+                <p><span class="label">Xanax:</span> <strong>{{ stats.xan_payout }} Ⓧ</strong> | <span class="label">eDVDs:</span> <strong>{{ stats.edvds_payout }} 💿</strong> | <span class="label">Ecstasy:</span> <strong>{{ stats.ecstasy_payout }} 💊</strong></p>
+              {% endif %}
+            </div>
+            {% endfor %}
+          </div>
+        </div>
+        {% endif %}
+
+        <!-- Detailed Overdose Table -->
+        <table class="overdose-table">
+          <thead>
+            <tr>
+              <th>Date</th>
+              <th>Type</th>
+              <th>Status</th>
+              <th>Payout</th>
+              <th>Details</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for overdose in all_overdoses %}
+            <tr>
+              <td>{{ overdose.reported_at.strftime('%Y-%m-%d %H:%M') }}</td>
+              <td><span class="badge {% if overdose.coverage_type == 'XAN' %}xan{% else %}extc{% endif %}">{{ overdose.coverage_type }}</span></td>
+              <td><span class="badge {% if overdose.confirmed %}confirmed{% else %}pending{% endif %}">{{ 'Confirmed' if overdose.confirmed else 'Pending' }}</span></td>
+              <td>
+                {% if overdose.confirmed and overdose.payout_details %}
+                  {{ overdose.payout_details }}
+                {% elif overdose.confirmed %}
+                  {{ overdose.payout }} Ⓧ
+                {% else %}
+                  <span class="text-muted">Pending</span>
+                {% endif %}
+              </td>
+              <td>
+                {% if overdose.notes %}
+                  {{ overdose.notes }}
+                {% else %}
+                  <span class="text-muted">-</span>
+                {% endif %}
+              </td>
+            </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+      {% endif %}
+    </div>
+  </div>
+
+  <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
+</body>
+</html>
