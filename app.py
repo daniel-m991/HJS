@@ -112,9 +112,9 @@ def create_app():
     if not database_url:
         raise RuntimeError("DATABASE_URL environment variable is required. Railway PostgreSQL not configured.")
     
-    # SQLAlchemy requires psycopg2:// dialect for PostgreSQL
+    # SQLAlchemy requires psycopg:// dialect for PostgreSQL (psycopg v3)
     if database_url.startswith("postgresql://"):
-        database_url = database_url.replace("postgresql://", "postgresql+psycopg2://", 1)
+        database_url = database_url.replace("postgresql://", "postgresql+psycopg://", 1)
     
     app.config["SQLALCHEMY_DATABASE_URI"] = database_url
     app.config["SQLALCHEMY_TRACK_MODIFICATIONS"] = False
