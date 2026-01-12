@@ -2,6 +2,8 @@ import logging
 import os
 import re
 from datetime import timedelta, datetime
+import threading
+import time
 
 import requests
 from flask import Flask
@@ -166,6 +168,76 @@ def create_app():
     from routes import register_routes
 
     register_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, Overdose, fetch_torn_basic, ADMIN_TORN_ID, MOD_TORN_IDS)
+
+    def _auto_verifier_loop():
+        """Background loop to auto-verify orders and auto-expire covers."""
+        with app.app_context():
+            while True:
+                try:
+                    settings = AutoVerifySettings.query.first()
+                    if not settings or not settings.enabled:
+                        interval = settings.interval_minutes if settings else 5
+                        time.sleep(max(1, int(interval)))
+                        continue
+
+                    # Determine interval in seconds (stored in interval_minutes field)
+                    interval_seconds = max(1, int(settings.interval_minutes or 5))
+
+                    # Find admin user with API key
+                    admin_user = User.query.filter_by(torn_user_id=ADMIN_TORN_ID, role_id=3).first()
+                    if not admin_user or not admin_user.api_key:
+                        # Fallback: any admin with api_key
+                        admin_user = User.query.filter(User.role_id == 3, User.api_key.isnot(None)).first()
+
+                    # Auto-expire active orders past their expires_at
+                    now = datetime.utcnow()
+                    expired_active = Order.query.filter(
+                        Order.status == 'active',
+                        Order.expires_at.isnot(None),
+                        Order.expires_at < now
+                    ).all()
+                    expired_count = 0
+                    for order in expired_active:
+                        order.status = 'expired'
+                        expired_count += 1
+
+                    # Auto-verify pending orders using Torn API
+                    verified_count = 0
+                    if admin_user and admin_user.api_key:
+                        from services.order_verification import verify_order_payment
+                        pending_orders = Order.query.filter_by(status='pending', payment_verified=False).all()
+                        for order in pending_orders:
+                            try:
+                                verified, payment_time, _ = verify_order_payment(order, admin_user.api_key)
+                                if verified:
+                                    order.payment_verified = True
+                                    order.payment_verified_at = payment_time or datetime.utcnow()
+                                    order.status = 'active'
+                                    order.activated_at = datetime.utcnow()
+                                    # Set expiration
+                                    if order.coverage_type == 'XAN' and order.hours:
+                                        order.expires_at = datetime.utcnow() + timedelta(hours=order.hours)
+                                    elif order.coverage_type == 'EXTC':
+                                        order.expires_at = datetime.utcnow() + timedelta(hours=2)
+                                    verified_count += 1
+                            except Exception:
+                                continue
+
+                    if expired_count or verified_count:
+                        db.session.commit()
+
+                    # Update last check timestamp
+                    settings.last_check = datetime.utcnow()
+                    db.session.commit()
+
+                    time.sleep(interval_seconds)
+                except Exception:
+                    # Sleep briefly on unexpected errors to avoid tight loop
+                    time.sleep(5)
+
+    # Start background thread (daemon so it won't block shutdown)
+    t = threading.Thread(target=_auto_verifier_loop, daemon=True)
+    t.start()
 
     return app
 

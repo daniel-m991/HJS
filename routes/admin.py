@@ -271,7 +271,7 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
         
         interval = request.form.get("interval", type=int)
         if not interval or interval < 1:
-            flash("Invalid interval. Must be at least 1 minute.", "error")
+            flash("Invalid interval. Must be at least 1 second.", "error")
             return redirect(url_for("admin_panel"))
         
         auto_settings = AutoVerifySettings.query.first()
@@ -279,10 +279,11 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
             auto_settings = AutoVerifySettings()
             db.session.add(auto_settings)
         
+        # Store seconds in existing field for compatibility
         auto_settings.interval_minutes = interval
         db.session.commit()
         
-        flash(f"Auto-check interval set to {interval} minutes.", "success")
+        flash(f"Auto-check interval set to {interval} seconds.", "success")
         return redirect(url_for("admin_panel"))
     
     @app.post("/admin/pricing/xan")

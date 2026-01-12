@@ -104,8 +104,8 @@
         </form>
         <form method="post" action="{{ url_for('set_auto_interval') }}" style="margin-top: 12px;">
           <div class="form-group">
-            <label>Check Interval (minutes)</label>
-            <input type="number" name="interval" value="{{ auto_settings.interval_minutes }}" min="1" max="60" required />
+            <label>Check Interval (seconds)</label>
+            <input type="number" name="interval" value="{{ auto_settings.interval_minutes }}" min="1" required />
           </div>
           <button type="submit" class="btn-secondary">Update Interval</button>
         </form>
@@ -186,7 +186,7 @@
 
     <div class="card" style="margin-top: 24px;">
       <h2>✅ Active Orders
-        <button type="button" class="btn-danger btn-small" style="margin-left: 8px;" onclick="expireActiveNow()">Expire Past-Due</button>
+        <button type="button" class="btn-danger btn-small" style="margin-left: 8px;" onclick="expireActiveNow()">Check Expired Orders</button>
       </h2>
       <div class="order-list">
         {% if active_orders %}
