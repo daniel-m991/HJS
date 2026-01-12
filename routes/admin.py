@@ -256,10 +256,17 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
             db.session.add(auto_settings)
         
         auto_settings.enabled = not auto_settings.enabled
+        # When enabling auto-verify, also enable auto-delete and set hours to 144
+        if auto_settings.enabled:
+            auto_settings.auto_delete_enabled = True
+            auto_settings.auto_delete_hours = 144
         db.session.commit()
         
         status = "enabled" if auto_settings.enabled else "disabled"
-        flash(f"Auto-verification {status}.", "success")
+        if auto_settings.enabled:
+            flash("Auto-verification enabled. Auto-delete enabled (144 hours).", "success")
+        else:
+            flash("Auto-verification disabled.", "success")
         
         return redirect(url_for("admin_panel"))
     
