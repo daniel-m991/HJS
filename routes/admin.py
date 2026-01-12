@@ -218,6 +218,31 @@ def init_admin_routes(app, db, User, Order, PricingConfig, AutoVerifySettings, O
             flash("No pending payments found to verify.", "info")
         
         return redirect(url_for("admin_panel"))
+
+    @app.post("/admin/orders/expire-now")
+    def expire_active_orders_now():
+        """Manually expire active orders whose expires_at has passed."""
+        admin = require_admin()
+        if not admin:
+            return jsonify({"error": "Unauthorized"}), 403
+
+        now = datetime.utcnow()
+
+        expired_active = Order.query.filter(
+            Order.status == 'active',
+            Order.expires_at.isnot(None),
+            Order.expires_at < now
+        ).all()
+
+        count = 0
+        for order in expired_active:
+            order.status = 'expired'
+            count += 1
+
+        if count > 0:
+            db.session.commit()
+
+        return jsonify({"success": True, "expired": count}), 200
     
     @app.post("/admin/toggle-auto-verify")
     def toggle_auto_verify():

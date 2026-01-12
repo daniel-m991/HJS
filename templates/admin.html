@@ -185,7 +185,9 @@
     </div>
 
     <div class="card" style="margin-top: 24px;">
-      <h2>✅ Active Orders</h2>
+      <h2>✅ Active Orders
+        <button type="button" class="btn-danger btn-small" style="margin-left: 8px;" onclick="expireActiveNow()">Expire Past-Due</button>
+      </h2>
       <div class="order-list">
         {% if active_orders %}
           <table>
@@ -633,6 +635,21 @@
           })
           .catch(e => alert('Error: ' + e));
       }
+    }
+
+    function expireActiveNow() {
+      if (!confirm('Check and expire all past-due active orders now?')) return;
+      fetch('/admin/orders/expire-now', { method: 'POST' })
+        .then(r => r.json())
+        .then(d => {
+          if (d.success) {
+            alert(`✅ Expired: ${d.expired}`);
+            location.reload();
+          } else {
+            alert('Error: ' + (d.error || 'Unknown error'));
+          }
+        })
+        .catch(e => alert('Error: ' + e));
     }
   </script>
 </body>

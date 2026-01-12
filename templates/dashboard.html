@@ -62,26 +62,6 @@
   </div>
   <script src="{{ url_for('static', filename='css/darkmode.js') }}"></script>
   <script>
-    // Confirm cover selection before submitting
-    document.addEventListener('DOMContentLoaded', function() {
-      const forms = document.querySelectorAll('.cover-buttons form');
-      forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-          const typeInput = form.querySelector('input[name="coverage_type"]');
-          const durationInput = form.querySelector('input[name="duration"]');
-          if (!typeInput || !durationInput) return; // safety
-          const type = typeInput.value; // 'XAN' or 'EXTC'
-          const duration = durationInput.value; // number as string
-          const unit = type === 'XAN' ? 'H' : 'J';
-          const message = `Are you sure you want to choose ${duration}${unit} cover?`;
-          if (!window.confirm(message)) {
-            e.preventDefault();
-            e.stopPropagation();
-          }
-        });
-      });
-    });
-
     function updateTimers() {
       const now = new Date().getTime();
       {% if active_xan_order %}
