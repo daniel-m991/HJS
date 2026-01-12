@@ -34,7 +34,7 @@ def verify_order_payment(order, admin_api_key: str) -> tuple:
     events = fetch_torn_events(admin_api_key)
     if not events:
         return False, None, None
-    
+
     # Determine message code based on coverage type
     message_code = 'HJSx' if order.coverage_type == 'XAN' else 'HJSe'
     expected_payment = order.xanax_payment
@@ -42,18 +42,25 @@ def verify_order_payment(order, admin_api_key: str) -> tuple:
     # Get user's Torn name for matching
     user_torn_name = order.user.torn_name.lower()
     
-    # 24-hour lookback window
-    current_time = datetime.utcnow()
-    lookback_limit = current_time - timedelta(hours=24)
-    
-    # Process events
-    log_items = []
+    # Normalize events to a list and only check the latest 3 by timestamp
+    normalized = []
     if isinstance(events, dict):
-        log_items = list(events.items())
+        for k, v in events.items():
+            if isinstance(v, dict):
+                v['_id'] = str(k)
+                normalized.append(v)
     elif isinstance(events, list):
-        log_items = [(i, entry) for i, entry in enumerate(events)]
-    
-    for log_id, log_entry in log_items:
+        for i, v in enumerate(events):
+            if isinstance(v, dict):
+                v['_id'] = str(i)
+                normalized.append(v)
+
+    # Sort by timestamp desc and take last 3 entries
+    normalized = [e for e in normalized if 'timestamp' in e and isinstance(e.get('timestamp'), (int, float))]
+    normalized.sort(key=lambda e: e.get('timestamp', 0), reverse=True)
+    recent_entries = normalized[:3]
+
+    for log_entry in recent_entries:
         if not isinstance(log_entry, dict):
             continue
         
@@ -68,12 +75,7 @@ def verify_order_payment(order, admin_api_key: str) -> tuple:
         log_timestamp = log_entry.get('timestamp', 0)
         if not log_timestamp:
             continue
-        
         log_time = datetime.fromtimestamp(log_timestamp)
-        
-        # Skip old entries
-        if log_time < lookback_limit:
-            continue
         
         # Check for required components
         has_xanax = 'xanax' in log_text_lower
@@ -113,7 +115,7 @@ def verify_order_payment(order, admin_api_key: str) -> tuple:
         return True, log_time, {
             'log_text': log_text,
             'timestamp': log_time,
-            'log_id': str(log_id)
+            'log_id': log_entry.get('_id')
         }
     
     return False, None, None
